@@ -102,17 +102,17 @@ export default function NavBar() {
 
               {cart && cart.length > 0 && (
                 <span
-  style={{
-    display: "inline-block",
-    width: "10px",
-    height: "10px",
-    backgroundColor: "red",
-    borderRadius: "50%",
-    position: "absolute",
-    top: "-2px",
-    right: "-2px"
-  }}
-></span>
+                  style={{
+                    display: "inline-block",
+                    width: "10px",
+                    height: "10px",
+                    backgroundColor: "red",
+                    borderRadius: "50%",
+                    position: "absolute",
+                    top: "-2px",
+                    right: "-2px"
+                  }}
+                ></span>
 
               )}
             </span>
@@ -173,7 +173,18 @@ export default function NavBar() {
                 </g>
               </svg>
               {cart && cart.length > 0 && (
-                <span className="MiniCart_CartIndicator_Badge1"></span>
+                                <span
+                  style={{
+                    display: "inline-block",
+                    width: "10px",
+                    height: "10px",
+                    backgroundColor: "red",
+                    borderRadius: "50%",
+                    position: "absolute",
+                    top: "-2px",
+                    right: "-2px"
+                  }}
+                ></span>
               )}
             </span>
           </div>
