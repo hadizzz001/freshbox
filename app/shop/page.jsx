@@ -133,8 +133,9 @@ const Body = () => {
     params.append('page', pageNum);
     params.append('limit', 10);
 
-    checkedCategories.forEach(cat => params.append('cat', cat));
-    checkedSubCategories.forEach(sub => params.append('sub', sub));
+    checkedCategories.forEach(cat => params.append('cat', cat.trim()));
+
+    checkedSubCategories.forEach(sub => params.append('sub', sub.trim()));
     checkedFactories.forEach(fac => params.append('brnd', fac));
     checkedSizes.forEach(size => params.append('size', size));
 
@@ -223,7 +224,6 @@ const Body = () => {
   useEffect(() => {
     fetchCategories();
     fetchSubCategories();
-    fetchFactories();
   }, []);
 
   useEffect(() => {
@@ -252,16 +252,7 @@ const Body = () => {
     }
   };
 
-  const fetchFactories = async () => {
-    try {
-      const response = await fetch("/api/brand");
-      const data = await response.json();
-      setFactoriesData(data);
-    } catch (error) {
-      console.error("Error fetching factories:", error);
-    }
-  };
-
+ 
 
   const handleCheckboxChange = (categoryId) => {
     setPage(1);
@@ -380,7 +371,8 @@ const Body = () => {
                         <input
                           className="br_absolute br_h-0 br_w-0 br_opacity-0"
                           type="checkbox"
-                          checked={checkedCategories.includes(category.name)}
+                          checked={checkedCategories.includes(category.name.trim())}
+
                           onChange={() => handleCheckboxChange(category.name)}
                         />
                         <span className="br_shrink-0 br_relative br_h-[22px] br_w-[22px] br_border-[#4a4a4a] br_border-solid br_border br_rounded md:br_h-[18px] md:br_w-[18px]">
@@ -433,7 +425,7 @@ const Body = () => {
                         <input
                           className="br_absolute br_h-0 br_w-0 br_opacity-0"
                           type="checkbox"
-                          checked={checkedSubCategories.includes(subCategory.name)}
+                          checked={checkedSubCategories.includes(subCategory.name.trim())}
                           onChange={() => handleSubCategoryChange(subCategory.name)}
                         />
                         <span className="br_shrink-0 br_relative br_h-[22px] br_w-[22px] br_border-[#4a4a4a] br_border-solid br_border br_rounded md:br_h-[18px] md:br_w-[18px]">
@@ -454,110 +446,7 @@ const Body = () => {
                   ))}
                 </div>
               </details>
-
-              <details className="br_pl-4 md:br_pl-8 br_pr-4">
-                <summary className="br_list-none br_cursor-pointer [&::-webkit-details-marker]:br_hidden [&::marker]:br_hidden">
-                  <h3 className="br_border-solid br_border-0 br_border-b br_border-grey-300 br_text-white br_text-base-sans-bold-stretched br_pb-2 br_flex br_justify-between br_items-end br_pt-4 myNewC">
-                    Brand
-                    <div className="br_w-3 [details[open]_&]:br_rotate-180 br_transition-transform br_duration-200">
-                      <svg
-                        viewBox="0 0 11 6"
-                        width={11}
-                        height={6}
-                        className="br_stroke-none br_fill-current br_w-full br_h-full myBB"
-                      >
-                        <path
-                          className="st0"
-                          d="M5.4,4.4l4.5-4.2c0.2-0.3,0.7-0.3,0.9,0c0,0,0,0,0,0c0.3,0.3,0.3,0.7,0,1c0,0,0,0,0,0L5.9,5.8 C5.6,6.1,5.2,6.1,5,5.8L0.2,1.1c-0.3-0.3-0.3-0.7,0-0.9C0.4,0,0.8,0,1.1,0.2c0,0,0,0,0,0L5.4,4.4z"
-                        />
-                      </svg>
-                    </div>
-                  </h3>
-                </summary>
-                <div className="br_my-2 md:br_my-4 md:br_h-full br_w-full br_gap-x-5 br_columns-2 md:br_columns-1">
-                  {factoriesData.map((factory) => (
-                    <div
-                      key={factory.id}
-                      className="br_block br_relative br_max-w-full br_w-full br_py-2 br_break-inside-avoid md:br_inline-block md:br_overflow-hidden md:br_m-0 md:br_p-0"
-                      title={factory.name}
-                    >
-                      <label className="br_flex br_gap-4 br_cursor-pointer br_text-white br_text-base-sans-spaced br_py-1 md:br_py-2 myNewC">
-                        <input
-                          className="br_absolute br_h-0 br_w-0 br_opacity-0"
-                          type="checkbox"
-                          checked={checkedFactories.includes(factory.name)}
-                          onChange={() => handleFactoryChange(factory.name)}
-                        />
-                        <span className="br_shrink-0 br_relative br_h-[22px] br_w-[22px] br_border-[#4a4a4a] br_border-solid br_border br_rounded md:br_h-[18px] md:br_w-[18px]">
-                          <span className="br_h-full br_w-full br_text-white">
-                            <img
-                              src={
-                                checkedFactories.includes(factory.name)
-                                  ? "https://res.cloudinary.com/duppvjinz/image/upload/v1701685867/eprldb0uad9klcw2ki5z.png" // Checked
-                                  : "https://res.cloudinary.com/duppvjinz/image/upload/v1701541407/jhvrodq8u9e8vjlwe964.png" // Unchecked
-                              }
-                              alt=""
-                            />
-                          </span>
-                        </span>
-                        {factory.name}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </details>
-
-              <details className="br_pl-4 md:br_pl-8 br_pr-4">
-                <summary className="br_list-none br_cursor-pointer [&::-webkit-details-marker]:br_hidden [&::marker]:br_hidden">
-                  <h3 className="br_border-solid br_border-0 br_border-b br_border-grey-300 br_text-white br_text-base-sans-bold-stretched br_pb-2 br_flex br_justify-between br_items-end br_pt-4 myNewC">
-                    Size
-                    <div className="br_w-3 [details[open]_&]:br_rotate-180 br_transition-transform br_duration-200">
-                      <svg
-                        viewBox="0 0 11 6"
-                        width={11}
-                        height={6}
-                        className="br_stroke-none br_fill-current br_w-full br_h-full myBB"
-                      >
-                        <path
-                          className="st0"
-                          d="M5.4,4.4l4.5-4.2c0.2-0.3,0.7-0.3,0.9,0c0,0,0,0,0,0c0.3,0.3,0.3,0.7,0,1c0,0,0,0,0,0L5.9,5.8 C5.6,6.1,5.2,6.1,5,5.8L0.2,1.1c-0.3-0.3-0.3-0.7,0-0.9C0.4,0,0.8,0,1.1,0.2c0,0,0,0,0,0L5.4,4.4z"
-                        />
-                      </svg>
-                    </div>
-                  </h3>
-                </summary>
-                <div className="br_my-2 md:br_my-4 md:br_h-full br_w-full br_gap-x-5 br_columns-2 md:br_columns-1">
-                  {allAvailableSizes.map((size) => (
-                    <div
-                      key={size}
-                      className="br_block br_relative br_max-w-full br_w-full br_py-2 br_break-inside-avoid md:br_inline-block md:br_overflow-hidden md:br_m-0 md:br_p-0"
-                      title={size}
-                    >
-                      <label className="br_flex br_gap-4 br_cursor-pointer br_text-white br_text-base-sans-spaced br_py-1 md:br_py-2 myNewC">
-                        <input
-                          className="br_absolute br_h-0 br_w-0 br_opacity-0"
-                          type="checkbox"
-                          checked={checkedSizes.includes(size)}
-                          onChange={() => handleSizeChange(size)}
-                        />
-                        <span className="br_shrink-0 br_relative br_h-[22px] br_w-[22px] br_border-[#4a4a4a] br_border-solid br_border br_rounded md:br_h-[18px] md:br_w-[18px]">
-                          <span className="br_h-full br_w-full br_text-white">
-                            <img
-                              src={
-                                checkedSizes.includes(size)
-                                  ? "https://res.cloudinary.com/duppvjinz/image/upload/v1701685867/eprldb0uad9klcw2ki5z.png"
-                                  : "https://res.cloudinary.com/duppvjinz/image/upload/v1701541407/jhvrodq8u9e8vjlwe964.png"
-                              }
-                              alt=""
-                            />
-                          </span>
-                        </span>
-                        {size}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </details>
+ 
 
             </div>
 

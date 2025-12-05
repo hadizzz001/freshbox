@@ -24,7 +24,7 @@ const Page = () => {
   const search = searchParams.get('id');
   const custom = searchParams.get('custom');
   const imgg = searchParams.get('imgg');
-  let imgs, title, price, desc, cat, brand, discount, id, stock, type, color, sub, fact, views, orders   ;
+  let imgs, title, price, desc, cat, brand, discount, id, stock, type, color, sub, fact, views, orders;
   const { cart, addToCart, quantities } = useCart();
   const { isBooleanValue, setBooleanValue } = useBooleanValue();
   const isInCart = cart?.some((item) => item._id === search);
@@ -38,6 +38,44 @@ const Page = () => {
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
   const hasRun = useRef(false);
   const [zoomedImg, setZoomedImg] = useState(null);
+  const [showQty, setShowQty] = useState(false);
+  const [unit, setUnit] = useState('grams');
+
+  const inCartItem = cart.find((i) => i._id === search);
+
+  useEffect(() => {
+    if (inCartItem) {
+      setShowQty(true);
+      setQuantity(inCartItem.quantity);
+      if (inCartItem.unit) setUnit(inCartItem.unit);   // ← RESTORE UNIT
+    } else {
+      setShowQty(false);
+      setQuantity(1);
+      setUnit("grams"); // default when not in cart
+    }
+  }, [inCartItem]);
+
+
+
+
+
+
+  const isOutOfStock =
+    (type === "single" && parseInt(stock) === 0) ||
+    (type === "collection" &&
+      color?.every(c => parseInt(c.qty) === 0));
+
+  const discountPercentage = Math.round(((price - discount) / price) * 100);
+
+
+
+  // Handle add to cart
+  const handleSubmit = (e) => {
+    if (e) e.preventDefault();
+    addToCart(allTemp1, quantity, "", "", unit);
+    setShowQty(true);
+  };
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -143,29 +181,7 @@ const Page = () => {
 
 
 
- 
 
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    if (isCollection && !selectedColor) {
-      alert("Please select a color.");
-      return;
-    }
-
-    // Check if sizes exist for this color
-    const selectedColorObj = color?.find((c) => c.color === selectedColor);
-    if (selectedColorObj?.sizes?.length > 0 && !selectedSize) {
-      alert("Please select a size.");
-      return;
-    }
-
-    addToCart(allTemp1, quantity, selectedColor, selectedSize);
-    handleClickc();
-    incrementViews123();
-
-  };
 
 
   const gotocart = () => {
@@ -179,7 +195,6 @@ const Page = () => {
   const isCollectionOutOfStock = isCollection && (!color || color.every(c => c.qty === 0));
   const isCollectionOutOfStock1 = isCollection && color?.every(color => color.sizes?.every(size => parseInt(size.qty) === 0));
   const isSingleOutOfStock = isSingle && Number(stock) === 0;
-  const isOutOfStock = isCollectionOutOfStock || isSingleOutOfStock || isCollectionOutOfStock1;
 
   const availableColorsWithSizes = color?.filter(c =>
     c.sizes?.some(size => size.qty > 0)
@@ -235,6 +250,9 @@ const Page = () => {
   }, [mainSwiper, zoomSwiper]);
 
 
+
+  console.log("inCartItem ",inCartItem);
+  
 
 
 
@@ -395,9 +413,14 @@ const Page = () => {
                           style={{ margin: "0 0 0 3px" }}
                         />
                       </h4>
-                      <p className="mb-2 myGray">Brand: {fact}</p>
-                      <p className="mb-2 myGray">Category: {cat}</p> 
+                      <p className="mb-2 myGray">Category: {cat}</p>
+                      <p className="mb-2 myGray">Sub-Category: {sub}</p>
                     </span>
+
+                                    <p
+                  className="myGray"
+                  dangerouslySetInnerHTML={{ __html: desc }}
+                />
 
                     <div className="ApexPriceAndFreeShippingWrapper">
                       <div>
@@ -485,124 +508,126 @@ const Page = () => {
                           )}
                         </div>
                       )}
-{/* --- price logic --- */}
-{hasSizes ? (
-  selectedSize ? (
-    (() => {
-      const original = parseFloat(displayedPrice);
-      return (
-        <div className="flex items-center space-x-2">
-          <h3 className="mb-2 myRed font-bold myPrice123">
-            ${original.toFixed(2)}
-          </h3>
-        </div>
-      );
-    })()
-  ) : null
-) : (() => {
-  const originalPrice = parseFloat(price || "0");
-  const discountPrice = parseFloat(discount || "0");
+                      {/* --- price logic --- */}
+                      {hasSizes ? (
+                        selectedSize ? (
+                          (() => {
+                            const original = parseFloat(displayedPrice);
+                            return (
+                              <div className="flex items-center space-x-2">
+                                <h3 className="mb-2 myRed font-bold myPrice123">
+                                  ${original.toFixed(2)}
+                                </h3>
+                              </div>
+                            );
+                          })()
+                        ) : null
+                      ) : (() => {
+                        const originalPrice = parseFloat(price || "0");
+                        const discountPrice = parseFloat(discount || "0");
 
-  // If discount is the same as price, show only price
-  if (originalPrice === discountPrice || discountPrice === 0) {
-    return (
-      <div className="flex items-center space-x-2">
-        <h3 className="mb-2 myRed font-regular myPrice1234">
-          ${originalPrice.toFixed(2)}
-        </h3>
-      </div>
-    );
-  }
+                        // If discount is the same as price, show only price
+                        if (originalPrice === discountPrice || discountPrice === 0) {
+                          return (
+                            <div className="flex items-center space-x-2">
+                              <h3 className="mb-2 myRed font-regular myPrice1234">
+                                ${originalPrice.toFixed(2)}
+                              </h3>
+                            </div>
+                          );
+                        }
 
-  const discountPercent = Math.round(
-    ((originalPrice - discountPrice) / originalPrice) * 100
-  );
+                        const discountPercent = Math.round(
+                          ((originalPrice - discountPrice) / originalPrice) * 100
+                        );
 
-  return (
-    <div className="flex items-center space-x-2">
-      <h3 className="mb-2 myRed font-bold myPrice1234">
-        ${discountPrice.toFixed(2)}
-      </h3>
-      <h2 className="mb-2 myGray line-through myPrice123">
-        ${originalPrice.toFixed(2)}
-      </h2>
+                        return (
+                          <div className="flex items-center space-x-2">
+                            <h3 className="mb-2 myRed font-bold myPrice1234">
+                              ${discountPrice.toFixed(2)}
+                            </h3>
+                            <h2 className="mb-2 myGray line-through myPrice123">
+                              ${originalPrice.toFixed(2)}
+                            </h2>
 
-      {discountPercent !== null && (
-        <span className="text-xs text-gray-500">({discountPercent}% off)</span>
-      )}
-    </div>
-  );
-})()}
+                            {discountPercent !== null && (
+                              <span className="text-xs text-gray-500">({discountPercent}% off)</span>
+                            )}
+                          </div>
+                        );
+                      })()}
 
 
 
                     </div>
 
+                    
+
                     {/* --- add to cart / in bag --- */}
                     <div className="bagsFeaturesGrid__gridWrapper">
-                      {isInCart ? (
-                        <>
-                          <p
-                            style={{
-                              color: "#222",
-                              textAlign: "center",
-                              fontSize: "2em",
-                              fontWeight: "bolder",
-                            }}
-                          >
-                            It's In cart!
-                          </p>
-                          <div>
-                            <span className="ProvidersSingleProduct--selected">
-                              <button
-                                type="button"
-                                className="AddToCart HtmlProductAddToCart"
-                                style={{ borderRadius: "0" }}
-                                onClick={gotocart}
-                              >
-                                <span>CHECKOUT NOW</span>
-                              </button>
+
+                      <div>
+
+
+                        {type !== "single" && (
+                          <div className="flex  gap-4 mt-4 opacity-100">
+                            <span
+                              className={`text-sm font-medium ${unit === "grams" ? "text-[#215839]" : "text-gray-500"
+                                } ${showQty ? "opacity-40" : ""}`}
+                            >
+                              Grams
+                            </span>
+
+                            <div
+                              className={`
+                relative w-20 h-10 rounded-full shadow-inner transition-colors duration-300 
+                ${unit === "grams" ? "bg-gray-300" : "bg-[#215839]"}
+                ${showQty ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
+            `}
+                              onClick={() =>
+                                !showQty && setUnit((prev) => (prev === "grams" ? "box" : "grams"))
+                              }
+                            >
+                              <div
+                                className={`
+                    absolute top-1 w-8 h-8 bg-white rounded-full shadow-md transition-transform duration-300 transform 
+                    ${unit === "box" ? "translate-x-[40px]" : "translate-x-1"}
+                `}
+                              ></div>
+                            </div>
+
+                            <span
+                              className={`text-sm font-medium ${unit === "box" ? "text-[#215839]" : "text-gray-500"
+                                } ${showQty ? "opacity-40" : ""}`}
+                            >
+                              Box
                             </span>
                           </div>
-                          <br />
-                        </>
-                      ) : (
-                        <div>
-                          <form onSubmit={handleSubmit}>
-                            <QuantitySelector
-                              initialQty={quantity}
-                              onChange={setQuantity}
-                              productId={id}
-                              type={type}
-                              selectedColor={selectedColor}
-                              selectedSize={selectedSize}
-                            />
+                        )}
 
-                            <span className="ProvidersSingleProduct--selected">
-                              {!isOutOfStock ? (
-                                <button
-                                  type="submit"
-                                  className="AddToCart HtmlProductAddToCart"
-                                  style={{ borderRadius: "0" }}
-                                  disabled={isCollection && !selectedColor}
-                                >
-                                  <span>ADD TO CART</span>
-                                </button>
-                              ) : (
-                                <OutOfStockComponent itemName={title} />
-                              )}
-                            </span>
-                          </form>
 
-                          <span className="ProvidersIfSelectedProductMatchesFilter">
-                            <p
-                              className="myGray"
-                              dangerouslySetInnerHTML={{ __html: desc }}
-                            />
-                            <br />
-                          </span>
-                        </div>
-                      )}
+
+
+                        {!showQty && !isOutOfStock && (
+                          <button
+                            onClick={handleSubmit}
+                            className="mt-4 w-full bg-[#215839] text-white py-2 rounded-lg font-medium shadow-lg hover:bg-[#1a492f] transition-colors"
+                          >
+                            Add to Bag
+                          </button>
+                        )}
+
+
+                        {showQty && inCartItem && (
+                          <QuantitySelector
+                            initialQty={inCartItem.quantity}
+                            productId={search}
+                            type={unit}
+                          />
+                        )}
+
+                      </div>
+
                       <br />
                     </div>
                   </section>
@@ -620,31 +645,31 @@ const Page = () => {
                     <div className="ProductTile-SliderContainer-Title br_text-3xl-serif br_text-white myGray">RELATED PRODUCTS:</div>
                     {allTemp2 && allTemp2?.length > 0 ? (
                       <section style={{ maxWidth: "100%" }}>
-<Swiper
-  spaceBetween={20}
-  loop
-  dir="rtl" // This makes the slider right-to-left
-  modules={[Autoplay]}
-  autoplay={{
-    delay: 2000,
-    stopOnLastSlide: false,
-    reverseDirection: true, // optional, for autoplay reverse
-  }}
-  breakpoints={{
-    150: {
-      slidesPerView: 2,
-    },
-    768: {
-      slidesPerView: 4,
-    },
-  }}
->
-  {allTemp2.map((temp, index) => (
-    <SwiperSlide key={temp._id}>
-      <CarCard temp={temp} index={index} />
-    </SwiperSlide>
-  ))}
-</Swiper>
+                        <Swiper
+                          spaceBetween={20}
+                          loop
+                          dir="rtl" // This makes the slider right-to-left
+                          modules={[Autoplay]}
+                          autoplay={{
+                            delay: 2000,
+                            stopOnLastSlide: false,
+                            reverseDirection: true, // optional, for autoplay reverse
+                          }}
+                          breakpoints={{
+                            150: {
+                              slidesPerView: 2,
+                            },
+                            768: {
+                              slidesPerView: 4,
+                            },
+                          }}
+                        >
+                          {allTemp2.map((temp, index) => (
+                            <SwiperSlide key={temp._id}>
+                              <CarCard temp={temp} index={index} />
+                            </SwiperSlide>
+                          ))}
+                        </Swiper>
 
                       </section>
                     ) : (

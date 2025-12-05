@@ -70,15 +70,33 @@ export async function GET(req) {
 
       const filteredCats = cats.filter((c) => c !== "yes");
 
-      if (filteredCats.length > 0) {
-        query.category = { $in: filteredCats };
-      }
+if (filteredCats.length > 0) {
+  query.$expr = query.$expr || {};
+  query.$expr.$and = query.$expr.$and || [];
+
+  query.$expr.$and.push({
+    $in: [
+      { $trim: { input: "$category" } }, 
+      filteredCats
+    ]
+  });
+}
+
     }
 
     // ✅ MULTIPLE SUB-CATEGORY FILTER
-    if (subs.length > 0) {
-      query.sub = { $in: subs };
-    }
+if (subs.length > 0) {
+  query.$expr = query.$expr || {};
+  query.$expr.$and = query.$expr.$and || [];
+
+  query.$expr.$and.push({
+    $in: [
+      { $trim: { input: "$sub" } },
+      subs
+    ]
+  });
+}
+
 
     // ✅ MULTIPLE BRAND FILTER
     if (brnds.length > 0) {

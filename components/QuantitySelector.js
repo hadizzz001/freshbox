@@ -1,116 +1,98 @@
 import React, { useState, useEffect } from "react";
+import { useCart } from "../app/context/CartContext";
 
-const QuantitySelector = ({ initialQty = 1, productId, onChange, type, selectedColor, selectedSize }) => {
+const QuantitySelector = ({ initialQty = 1, productId, type }) => {
+  const { updateQty } = useCart();
   const [qty, setQty] = useState(initialQty);
-  const [maxStock, setMaxStock] = useState(null); // Store max stock
+  const [maxStock, setMaxStock] = useState(null);
 
-
-
+  // Fetch stock based on type
   useEffect(() => {
     setQty(1);
+
     const fetchStock = async () => {
+      
       try {
-        const response = await fetch(`/api/stock/${productId}`);
-        const data = await response.json();
+        const apiUrl =
+          type === "box"
+            ? `/api/stocktype/${productId}`
+            : `/api/stock/${productId}`;
 
-        if (response.ok && data.stock) {
+            
+            
+
+        const response = await fetch(apiUrl);
+        const data = await response.json(); 
+        console.log("data: ", data);
+        
+        if (response.ok && data.stock !== undefined) {
           setMaxStock(parseInt(data.stock, 10));
-        } else {
-          console.error("Failed to fetch stock:", data.error);
         }
-      } catch (error) {
-        console.error("Error fetching stock:", error);
+      } catch (err) {
+        console.error("Error fetching stock:", err);
       }
     };
 
-    const fetchStock1 = async () => {
-      try {
-        const response = await fetch(`/api/stock1/${productId},${selectedColor}`);
-        const data = await response.json();
+    fetchStock();
+  }, [productId, type]);
 
-        console.log("data123: ", data);
-
-        if (response.ok && data.qty) {
-          setMaxStock(parseInt(data.qty, 10));
-        } else {
-          console.error("Failed to fetch stock1:", data.error);
-        }
-      } catch (error) {
-        console.error("Error fetching stock1:", error);
-      }
-    };
-
-const fetchStock2 = async () => {
-  try {
-    const response = await fetch(`/api/stock2/${productId},${selectedColor},${selectedSize}`);
-    const data = await response.json();
-
-    console.log("data444: ", data);
-
-    if (response.ok && data.qty !== undefined) {
-      setMaxStock(parseInt(data.qty, 10));
-    } else {
-      console.error("Failed to fetch stock2:", data.error || "Unknown error");
-      setMaxStock(0); // Optional: reset max stock if fetch failed
+  // Decrease qty
+  const decrease = () => {
+    if (qty === 1) {
+      updateQty(productId, 0);
+      return;
     }
-  } catch (error) {
-    console.error("Error fetching stock2:", error);
-    setMaxStock(0); // Optional: reset max stock if error occurs
-  }
-};
-
-
-
-    if (type === "collection") {
-      if (productId && selectedColor && selectedSize) { 
-        fetchStock2();
-      }
-      else {
-        fetchStock1();
-      }
-
-    } else {
-      fetchStock();
-    }
-  }, [productId, selectedColor, selectedSize]);
-
-
-  const handleIncrement = () => {
-    if (maxStock !== null && qty < maxStock) { // Prevent exceeding max stock
-      setQty(qty + 1);
-      onChange(qty + 1);
-    }
+    setQty(qty - 1);
+    updateQty(productId, qty - 1);
   };
 
-  const handleDecrement = () => {
-    if (qty > 1) {
-      setQty(qty - 1);
-      onChange(qty - 1);
-    }
+  // Increase qty with max check
+  const increase = () => {
+    if (maxStock !== null && qty >= maxStock) return; // STOP at max
+    setQty(qty + 1);
+    updateQty(productId, qty + 1);
   };
+
+  // Typing qty manually
+  const handleInputChange = (e) => {
+    let newQty = parseInt(e.target.value) || 0;
+
+    if (maxStock !== null && newQty > maxStock) newQty = maxStock; // cap to stock
+    if (newQty < 0) newQty = 0;
+
+    setQty(newQty);
+    updateQty(productId, newQty);
+  };
+
+
 
   return (
-    <div className="quantity-selector">
+    <div className="flex gap-4 items-center mt-3">
+
+      {/* Minus button */}
       <button
-        className="myNewC"
-        type="button"
-        onClick={handleDecrement}
-        style={{ width: "20px", backgroundColor: "initial", marginRight: "5px", fontWeight: "900" }}
+        onClick={decrease}
+        className="w-10 h-10 flex items-center justify-center rounded-full text-white text-2xl font-light"
+        style={{ backgroundColor: "#215839" }}
       >
         -
       </button>
+
+      {/* Quantity input */}
       <input
-        type="number"
+        className="w-14 text-center text-lg font-light outline-none border-none bg-transparent"
         value={qty}
-        readOnly
-        style={{ width: "30px", color: "initial" }}
+        onChange={handleInputChange}
       />
+
+      {/* Plus button */}
       <button
-        className="myNewC"
-        type="button"
-        onClick={handleIncrement}
-        style={{ width: "20px", backgroundColor: "initial", marginLeft: "5px", fontWeight: "900" }}
-        disabled={maxStock !== null && qty >= maxStock} // Disable if at max stock
+        onClick={increase}
+        disabled={maxStock !== null && qty >= maxStock}
+        className={`w-10 h-10 flex items-center justify-center rounded-full text-white text-2xl font-light ${
+          maxStock !== null && qty >= maxStock ? "opacity-40 cursor-not-allowed" : ""
+        }`}
+        style={{ backgroundColor: "#215839" }}
       >
         +
       </button>

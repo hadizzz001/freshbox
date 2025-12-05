@@ -4,21 +4,19 @@
 
 import { useState, useEffect } from "react";
 import { useCart } from '../context/CartContext';
-import WhatsAppButton from "../../components/WhatsAppButton";
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import WhatsAppButton from "../../components/WhatsAppButton"; 
 import axios from 'axios';
 import intlTelInput from 'intl-tel-input';
 import 'intl-tel-input/build/css/intlTelInput.css';
-
+import { useBooleanValue } from '../context/CartBoolContext'; 
 
 
 const page = () => {
 
   const { cart, removeFromCart, quantities, subtotal, addToCart } = useCart();
-  const [localQuantities, setLocalQuantities] = useState(quantities);
+  const [localQuantities, setLocalQuantities] = useState({});
   const [phone, setPhone] = useState("");
-  const [isOpen, setIsOpen] = useState(false); 
+  const [isOpen, setIsOpen] = useState(false);
   const [promoCode, setPromoCode] = useState("");
   const [promoCodes, setPromoCodes] = useState([]); // Store promo codes from API
   const [usedAbcd1234, setUsedAbcd1234] = useState(false);
@@ -43,17 +41,106 @@ const page = () => {
     code: '',
     flag: '',
     dial: '',
-  }); 
+  });  
+    const { isBooleanValue, setBooleanValue } = useBooleanValue(); 
+    const [maxStock, setMaxStock] = useState({});
+
+    const handleRemoveFromCart = (itemId) => {
+        removeFromCart(itemId);
+    };
+
+    useEffect(() => {
+        const q = {};
+        cart.forEach(item => {
+            q[item._id] = item.quantity;
+        });
+        setLocalQuantities(q);
+    }, [cart]);
+
+    const handleClickc = () => {
+        var cartb = document.getElementById("cartid");
+        var cartb2 = document.getElementById("cartid2");
+        setBooleanValue(!isBooleanValue);
+        if (cartb && cartb2) {
+            if (isBooleanValue) {
+                cartb2.className += " MiniCart_Cart-visible";
+            } else {
+                cartb2.classList.remove("MiniCart_Cart-visible");
+            }
+        }
+    };
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const response = await fetch(`api/products`);
+                const data = await response.json();
+                setAllTemps2(data.slice(0, 5));
+            } catch (error) {
+                console.error("Error fetching the description:", error);
+            }
+        };
+        fetchData();
+    }, []);
+
+    useEffect(() => {
+        const fetchStock = async () => {
+            const updatedStock = {};
+            for (const item of cart) {
+                try {
+                    const response = await fetch(`/api/stock/${item._id}`);
+                    const data = await response.json();
+                    updatedStock[item._id] = parseInt(data.stock, 10);
+                } catch (error) {
+                    console.error("Error fetching stock:", error);
+                    updatedStock[item._id] = 1;
+                }
+            }
+            setMaxStock(updatedStock);
+        };
+        fetchStock();
+    }, [cart]);
+
+    const handleQuantityChange = (itemId, quantity) => {
+        let newQuantity = parseInt(quantity, 10);
+
+        if (isNaN(newQuantity) || newQuantity < 1) {
+            newQuantity = 1;
+        } else if (newQuantity > (maxStock[itemId] || 1)) {
+            newQuantity = maxStock[itemId];
+        }
+
+        addToCart(
+            cart.find((item) => item._id === itemId),
+            newQuantity
+        );
+
+        setLocalQuantities((prevQuantities) => ({
+            ...prevQuantities,
+            [itemId]: newQuantity,
+        }));
+    };
+
+
+    const getItemPrice = (item) => {
+    // CASE 1 — BOX
+    if (item.type === "box") {
+        return parseFloat(item.costBox?.price || item.price || 0);
+    }
+
+    // CASE 2 — GRAMS
+    if (item.type === "grams") {
+        return parseFloat(item.discount || item.price || 0);
+    }
+
+    // DEFAULT
+    return parseFloat(item.discount || item.price || 0);
+};
 
 
 
-
-  const handleRemoveFromCart = (itemId) => {
-    removeFromCart(itemId);
-  };
 
  
-
 
 
   useEffect(() => {
@@ -82,18 +169,18 @@ const page = () => {
   }, [subtotal, deliveryFee]);
 
   useEffect(() => {
-  const fetchCountry = async () => {
-    try {
-      const response = await axios.get('https://ipwho.is/');
-      const countryName = response.data.country; // ipwho.is uses "country" key
-      setCountry(countryName);
-    } catch (error) {
-      console.error('Failed to detect country:', error);
-    }
-  };
+    const fetchCountry = async () => {
+      try {
+        const response = await axios.get('https://ipwho.is/');
+        const countryName = response.data.country; // ipwho.is uses "country" key
+        setCountry(countryName);
+      } catch (error) {
+        console.error('Failed to detect country:', error);
+      }
+    };
 
-  fetchCountry();
-}, []);
+    fetchCountry();
+  }, []);
 
   // 2. Fetch cities based on detected country
   useEffect(() => {
@@ -124,80 +211,80 @@ const page = () => {
     }));
   }, [country]);
 
- 
 
-const handleTextboxChange = (textboxName) => (e) => {
-  let value = e.target.value;
 
-  if (textboxName === "phone") {
-    // Allow leading '+', then remove all non-digit characters except for that leading '+'
-    if (value.startsWith('+')) {
-      value = '+' + value.slice(1).replace(/[^0-9]/g, '');
-    } else {
-      value = value.replace(/[^0-9]/g, '');
+  const handleTextboxChange = (textboxName) => (e) => {
+    let value = e.target.value;
+
+    if (textboxName === "phone") {
+      // Allow leading '+', then remove all non-digit characters except for that leading '+'
+      if (value.startsWith('+')) {
+        value = '+' + value.slice(1).replace(/[^0-9]/g, '');
+      } else {
+        value = value.replace(/[^0-9]/g, '');
+      }
+
+      const numericValue = value.replace(/[^0-9]/g, '');
+      const isValidPhone = numericValue.length >= 2;
+
+      let formattedPhone = value;
+
+      if (
+        isValidPhone &&
+        countryData?.dial &&
+        !numericValue.startsWith(countryData.dial.replace('+', ''))
+      ) {
+        const dial = countryData.dial;
+        formattedPhone = dial + numericValue;
+      }
+
+      setPhone(formattedPhone);
+      setInputs((prevValues) => ({
+        ...prevValues,
+        phone: formattedPhone,
+      }));
+
+      return;
     }
 
-    const numericValue = value.replace(/[^0-9]/g, '');
-    const isValidPhone = numericValue.length >= 2;
-
-    let formattedPhone = value;
-
-    if (
-      isValidPhone &&
-      countryData?.dial &&
-      !numericValue.startsWith(countryData.dial.replace('+', ''))
-    ) {
-      const dial = countryData.dial;
-      formattedPhone = dial + numericValue;
-    }
-
-    setPhone(formattedPhone);
     setInputs((prevValues) => ({
       ...prevValues,
-      phone: formattedPhone,
+      [textboxName]: value,
     }));
-
-    return;
-  }
-
-  setInputs((prevValues) => ({
-    ...prevValues,
-    [textboxName]: value,
-  }));
-};
+  };
 
 
 
-useEffect(() => {
-  // Auto-detect country and dial code using ipwho.is
-  fetch('https://ipwho.is/')
-    .then((res) => res.json())
-    .then((data) => {
-      setCountryData({
-        code: data.country_code, // e.g., "LB"
-        flag: `https://flagcdn.com/24x18/${data.country_code.toLowerCase()}.png`,
-        dial: `+${data.calling_code}`, // ✅ use calling_code from ipwho.is
-      });
-    })
-    .catch((error) => console.error('Failed to get country info:', error));
-}, []);
+  useEffect(() => {
+    // Auto-detect country and dial code using ipwho.is
+    fetch('https://ipwho.is/')
+      .then((res) => res.json())
+      .then((data) => {
+        setCountryData({
+          code: data.country_code, // e.g., "LB"
+          flag: `https://flagcdn.com/24x18/${data.country_code.toLowerCase()}.png`,
+          dial: `+${data.calling_code}`, // ✅ use calling_code from ipwho.is
+        });
+      })
+      .catch((error) => console.error('Failed to get country info:', error));
+  }, []);
 
 
 
 
-useEffect(() => {
-  if (subtotal > 50) {
-    setDeliveryFee(0);
-    return;
-  }
+  useEffect(() => {
+    if (subtotal > 50) {
+      setDeliveryFee(0);
+      return;
+    }
 
-  const normalizedCity = inputs.city?.trim().toLowerCase();
-  if (normalizedCity === 'beirut') {
-    setDeliveryFee(3);
-  } else {
-    setDeliveryFee(5);
-  }
-}, [subtotal, inputs.city]);
+    const normalizedCity = inputs.city?.trim().toLowerCase();
+    if (normalizedCity === 'beirut') {
+      setDeliveryFee(3);
+    } else {
+      setDeliveryFee(5);
+    }
+  }, [subtotal, inputs.city]);
 
 
 
@@ -246,130 +333,9 @@ useEffect(() => {
   };
 
 
-  const handleCheckboxChange = (e) => {
-    setShowLink(e.target.checked);
-  };
+ 
 
-
-
-
-
-
-
-const generatePDF = async () => {
-  const doc = new jsPDF();
-  doc.setFontSize(18);
-  doc.text('Product List PDF', 10, 10);
-
-  const imagePromises = cart.map(async (item) => {
-    const imageUrl = item.img[0];
-    const imageData = await toDataURL(imageUrl);
-    return {
-      ...item,
-      imageData,
-    };
-  });
-
-  const itemsWithImages = await Promise.all(imagePromises);
-
-  // Calculate total amount
-  const totalAmount = itemsWithImages.reduce((sum, item) => {
-    return sum + item.discount * item.quantity;
-  }, 0);
-
-  const tableData = itemsWithImages.map((item) => [
-    { content: '', image: item.imageData },
-    item.title,
-    item.category,
-    `$${item.discount}`,
-    item.quantity,
-    item.selectedColor,
-  ]);
-
-  // Add total row at the end
-  tableData.push([
-    '', '', 'Total Amount', '', '', `$${totalAmount.toFixed(2)}`
-  ]);
-
-  // Utility to chunk array into groups of 8
-  const chunkArray = (arr, size) =>
-    Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
-      arr.slice(i * size, i * size + size)
-    );
-
-  const chunkedData = chunkArray(tableData, 8);
-  let startY = 20;
-
-  chunkedData.forEach((chunk, index) => {
-    if (index > 0) {
-      doc.addPage();
-      startY = 10;
-      doc.setFontSize(18);
-      doc.text('Product List PDF (continued)', 10, startY);
-      startY += 10;
-    }
-
-    autoTable(doc, {
-      startY,
-      head: [['Image', 'Title', 'Category', 'Price', 'Quantity', 'Color']],
-      body: chunk,
-      didDrawCell: (data) => {
-        if (data.column.index === 0 && data.cell.raw.image) {
-          doc.addImage(
-            data.cell.raw.image,
-            'JPEG',
-            data.cell.x + 2,
-            data.cell.y + 2,
-            25,
-            25
-          );
-        }
-      },
-      columnStyles: {
-        0: { cellWidth: 30 },
-      },
-      headStyles: {
-        minCellHeight: 10,
-        valign: 'middle',
-        halign: 'center',
-      },
-      bodyStyles: {
-        minCellHeight: 30,
-        valign: 'middle',
-        halign: 'center',
-      },
-      styles: {
-        fontSize: 10,
-        cellPadding: 3,
-      },
-    });
-  });
-
-  doc.save('cart-items.pdf');
-};
-
-
-  const toDataURL = async (url) => {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.readAsDataURL(blob);
-    });
-  };
-
-
-
-
-
-
-
-
-
-
-
-
+ 
 
   return (
     <>
@@ -430,202 +396,7 @@ const generatePDF = async () => {
 
       {cart && cart.length > 0 ? (
         <div className="wfacp-template-container  ">
-
-
-          <div className="wfacp-section wfacp-hg-by-box step_2 form_section_single_step_2_elementor-hific mt-[10em] md:hidden" data-field-count={2}>
-            <div className="wfacp_internal_form_wrap wfacp-comm-title flex justify-between items-center px-3">
-              <p className="cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
-                <span className="flex items-center myBB">
-                  Order summary
-                  {isOpen ? (
-                    <svg
-                      viewBox="0 0 11 6"
-                      width="14"
-                      height="14"
-                      className="ml-2 mr-2 myBB"
-                      fill="#222"
-                    >
-                      <path
-                        className="st0 myBB"
-                        d="M5.4,4.4l4.5-4.2c0.2-0.3,0.7-0.3,0.9,0c0,0,0,0,0,0c0.3,0.3,0.3,0.7,0,1c0,0,0,0,0,0L5.9,5.8 C5.6,6.1,5.2,6.1,5,5.8L0.2,1.1c-0.3-0.3-0.3-0.7,0-0.9C0.4,0,0.8,0,1.1,0.2c0,0,0,0,0,0L5.4,4.4z"
-                      />
-                    </svg>
-                  ) : (
-                    <svg
-                      viewBox="0 0 11 6"
-                      width="14"
-                      height="14"
-                      className="ml-2 mr-2 myBB rotate-180"
-                      fill="#222"
-                    >
-                      <path
-                        className="st0 myBB"
-                        d="M5.4,4.4l4.5-4.2c0.2-0.3,0.7-0.3,0.9,0c0,0,0,0,0,0c0.3,0.3,0.3,0.7,0,1c0,0,0,0,0,0L5.9,5.8 C5.6,6.1,5.2,6.1,5,5.8L0.2,1.1c-0.3-0.3-0.3-0.7,0-0.9C0.4,0,0.8,0,1.1,0.2c0,0,0,0,0,0L5.4,4.4z"
-                      />
-                    </svg>
-                  )}
-                </span>
-              </p>
-              <span className="myBB font-bold" style={{ fontSize: "20px" }}>${total}</span>
-            </div>
-
-
-            {isOpen && (
-              <div className="wfacp-comm-form-detail clearfix">
-                <div className="wfacp-row">
-                  <div className="wfacp_woocommerce_form_coupon wfacp-form-control-wrapper" id="order_coupon_field"></div>
-                  <div className="wfacp_order_summary wfacp_wrapper_start wfacp_order_sec" id="order_summary_field">
-
-                    <div className="wfacp_anim wfacp_order_summary_container">
-                      <table className="shop_table woocommerce-checkout-review-order-table elementor-hific">
-                        <tbody>
-                          {cart?.map((obj, index) => (
-                            <tr key={obj._id} className="cart_item">
-                              <td className="product-name-area" style={{ display: "flex", alignItems: "center" }}>
-                                {/* Product Image */}
-                                <div className="product-image">
-                                  <div className="wfacp-pro-thumb">
-                                    <div className="wfacp-qty-ball" style={{ top: "-5px" }}>
-                                      <div className="wfacp-qty-count">
-                                        <span className="wfacp-pro-count">{localQuantities[obj._id]}</span>
-                                      </div>
-                                    </div>
-                                    <img src={obj.img[0]} width={50} height={50} alt={obj.title} />
-                                  </div>
-                                </div>
-
-                                {/* Product Name */}
-                                <div className="product-name wfacp_summary_img_true" style={{ marginLeft: "10px", color: "#82838e" }}>
-                                  <span className="wfacp_order_summary_item_name" style={{ color: "#82838e" }}>
-                                    {obj.title}
-                                  </span>
-                                </div>
-                              </td>
-
-                              {/* Price and Remove Button */}
-                              <td className="product-total" style={{ color: "#82838e" }}>
-                                <div className="wfacp_order_summary_item_total">
-                                  <span className="woocommerce-Price-amount amount" style={{ color: "#82838e" }}>
-                                    <bdi>
-                                      <span className="woocommerce-Price-currencySymbol" style={{ color: "#82838e" }}>$</span>
-                                      {(obj.discount * localQuantities[obj._id] || obj.discount).toFixed(2)}
-                                    </bdi>
-                                  </span>
-                                </div>
-
-                                <button
-                                  className="Checkout_Cart_LineItems_LineItem_Remove"
-                                  onClick={() => handleRemoveFromCart(obj._id)}
-                                  style={{ position: "relative" }}
-                                >
-                                  <span className="Checkout_Cart_LineItems_LineItem_Remove_Cross">
-                                    <span />
-                                    <span />
-                                  </span>
-                                  <span className="Checkout_Cart_LineItems_LineItem_Remove_Spinner">
-                                    <span />
-                                  </span>
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-
-
-
-                        {/* Promo Code Input */}
-                        <div style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "5px",
-                          padding: "5px",
-                          borderRadius: "5px",
-                          margin: "5px",
-                          border: "1px solid #222"
-                        }}>
-                          <input
-                            type="text"
-                            placeholder="Enter promo code"
-                            value={promoCode}
-                            onChange={(e) => setPromoCode(e.target.value)}
-                            style={{
-                              flex: 1,
-                              padding: "8px",
-                              border: "1px solid #222",
-                              borderRadius: "4px"
-                            }}
-                          />
-                          <button
-                            onClick={applyPromo}
-                            style={{
-                              padding: "5px 12px",
-                              color: "#fff",
-                              border: "none",
-                              borderRadius: "4px",
-                              cursor: discountApplied ? "not-allowed" : "pointer",
-                              background: discountApplied ? "green" : "#222",
-                            }}
-                            disabled={discountApplied} // Disable button when discount is applied
-                          >
-                            {discountApplied ? "Done!" : "Apply"} {/* Show "Done!" when discount is applied */}
-                          </button>
-                        </div>
-
-                        <tfoot>
-                          <tr className="cart-subtotal">
-                            <th><span>Subtotal</span></th>
-                            <td>
-                              <span className="woocommerce-Price-amount amount">
-                                <bdi>
-                                  <span className="woocommerce-Price-currencySymbol">$</span>
-                                  {subtotal.toFixed(2)}
-                                </bdi>
-                              </span>
-                            </td>
-                          </tr>
-                          <tr className="shipping_total_fee">
-                            <td colSpan={1}><span style={{ color: "#82838e" }}>Delivery</span></td>
-                            <td colSpan={1} style={{ textAlign: "right" }}>
-                              <span className="woocommerce-Price-amount amount" style={{ color: "#82838e" }}>
-                                <bdi>
-                                  <span className="woocommerce-Price-currencySymbol" style={{ color: "#82838e" }}>$</span>
-                                  {deliveryFee.toFixed(2)}
-                                </bdi>
-                              </span>
-                            </td>
-                          </tr>
-                          <tr className="order-total">
-                            <th><span>Total</span></th>
-                            <td>
-                              <strong>
-                                <span className="woocommerce-Price-amount amount">
-                                  <bdi>
-                                    <span className="woocommerce-Price-currencySymbol">$</span>
-                                    {total}
-                                  </bdi>
-                                </span>
-                              </strong>
-                            </td>
-                          </tr>
-                        </tfoot>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-
-
-
-
-
-
-
-
-
-
+   
           <div
             data-elementor-type="wp-post"
             data-elementor-id={20120}
@@ -810,7 +581,7 @@ const generatePDF = async () => {
                                             />
                                           </p>
 
-                                           <h1 className="form-row form-row-wide wfacp-form-control-wrapper text-bold myGray">Delivery</h1>
+                                          <h1 className="form-row form-row-wide wfacp-form-control-wrapper text-bold myGray">Delivery</h1>
                                           <p
                                             className="form-row form-row-first wfacp-form-control-wrapper wfacp-col-left-half  wfacp_field_required validate-required"
                                             id="billing_first_name_field"
@@ -972,7 +743,7 @@ const generatePDF = async () => {
 
 
 
-                                        <p
+                                          <p
                                             className="form-row form-row-wide wfacp-form-control-wrapper wfacp-col-full  wfacp_field_required validate-required validate-email validate-email"
                                             id="billing_address_field"
                                             data-priority={110}
@@ -1022,7 +793,7 @@ const generatePDF = async () => {
                                               htmlFor="billing_apt"
                                               className="wfacp-form-control-label"
                                             >
-                                              Apt - Floor 
+                                              Apt - Floor
                                             </label>
                                             <span className="woocommerce-input-wrapper">
                                               <input
@@ -1042,7 +813,7 @@ const generatePDF = async () => {
                                               data-key="billing_apt_field"
                                             />
                                           </p>
- 
+
 
                                           <p
                                             className="form-row form-row-wide wfacp-form-control-wrapper wfacp-col-full wfacp_field_required"
@@ -1155,7 +926,7 @@ const generatePDF = async () => {
                                                             <div className="wfacp-pro-thumb">
                                                               <div className="wfacp-qty-ball" style={{ top: "-5px" }}>
                                                                 <div className="wfacp-qty-count">
-                                                                  <span className="wfacp-pro-count">{localQuantities[obj._id]}</span>
+                                                                  <span className="wfacp-pro-count">{localQuantities?.[obj._id] ?? 1}</span>
                                                                 </div>
                                                               </div>
                                                               <img src={"" + obj.img[0]}
@@ -1169,6 +940,11 @@ const generatePDF = async () => {
                                                               {obj.title}
                                                             </span>
                                                           </div>
+                                                          <div className="product-name  wfacp_summary_img_true ">
+                                                            <span className="wfacp_order_summary_item_name">
+                                                              {obj.unit}
+                                                            </span>
+                                                          </div>
                                                         </td>
                                                         <td className="product-total">
                                                           <div className="wfacp_order_summary_item_total">
@@ -1177,8 +953,17 @@ const generatePDF = async () => {
                                                                 <span className="woocommerce-Price-currencySymbol">
                                                                   $
                                                                 </span>
-                                                                {obj.type === 'collection' && obj.selectedSize ? obj.color.find(c => c.color === obj.selectedColor)?.sizes.find(s => s.size === obj.selectedSize)?.price * (localQuantities[obj._id]) : obj.discount * (localQuantities[obj._id] || 1)}
- 
+                                                                {(() => {
+                                                                  const qty = localQuantities[obj._id] || 1;
+
+                                                                  // Check unit type
+                                                                  const price =
+                                                                    obj.unit === "box"
+                                                                      ? parseFloat(obj.costBox?.price || obj.discount)
+                                                                      : parseFloat(obj.discount);
+
+                                                                  return (price * qty).toFixed(2);
+                                                                })()}
                                                               </bdi>
                                                             </span>{" "}
                                                           </div>
@@ -1245,29 +1030,6 @@ const generatePDF = async () => {
                                                     {discountApplied ? "Done!" : "Apply"} {/* Show "Done!" when discount is applied */}
                                                   </button>
                                                 </div>
-
-                                                <div>
-                                                  <label className="custom-checkbox-container myGray clickText  ">
-                                                    <span className="ml-[25px]"></span>I am business or would like a b2b offer
-                                                    <input type="checkbox" onChange={handleCheckboxChange} />
-                                                    <span className="custom-checkmark"></span>
-                                                  </label>
-
-                                                  {showLink && (
-                                                    <a
-                                                      href="#"
-                                                      onClick={(e) => {
-                                                        e.preventDefault();
-                                                        generatePDF();
-                                                      }}
-                                                      style={{ display: 'block', marginTop: '1em', color: 'blue' }}
-                                                      className="clickText1"
-                                                    >
-                                                      Generate Product PDF
-                                                    </a>
-                                                  )}
-                                                </div>
-
 
 
 

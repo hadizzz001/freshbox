@@ -20,19 +20,12 @@ const WhatsAppButton = ({ inputs, items, total, delivery, code }) => {
         if (item.type === 'single') {
           url = `/api/stock/${item._id}`;
           body = { qty: quantityToDecrease };
-        } else if (item.type === 'collection' && item.selectedSize) {
-          url = `/api/stock2/${item._id}`;
-          body = {
-            id: item._id,
-            qty: quantityToDecrease,
-            color: item.selectedColor,
-            size: item.selectedSize
-          };
+        } else if (item.type === 'box' && item.unit === 'grams' ) {
+          url = `/api/stock/${item._id}`;
+          body = { qty: quantityToDecrease };
         } else {
-          url = `/api/stock1/${item._id}`;
-          body = {
-            id: item._id,
-            color: item.selectedColor,
+          url = `/api/stocktype/${item._id}`;
+          body = { 
             qty: quantityToDecrease
           };
         }
@@ -155,15 +148,14 @@ const createWhatsAppURL = (inputs, items, total, delivery, code, subtotal) => {
     ${items.map((item, index) => `
       Item ${index + 1}:
       - Name: ${item.title} 
+      - Type: ${item.unit} 
       - Quantity: ${item.quantity}
       - Price: $${(() => {
       const colorObj = item.color?.find(c => c.color === item.selectedColor);
       const sizeObj = colorObj?.sizes?.find(s => s.size === item.selectedSize);
       return sizeObj?.price ?? item.discount;
     })()}
-
-      - Color: ${item.selectedColor}
-      - Size: ${item.selectedSize}
+ 
       - Image: ${item.img[0]} 
     `).join('\n')}
 
